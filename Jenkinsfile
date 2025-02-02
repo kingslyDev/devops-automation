@@ -4,12 +4,12 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'devops-automation'
         DOCKER_TAG = 'latest'
+        REMOTE_SERVER = 'ghalyallcoc@34.128.112.49' // Ganti dengan IP VPS Anda
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Checkout kode dari GitHub
                 git 'https://github.com/kingslyDev/devops-automation.git'
             }
         }
@@ -17,8 +17,26 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Membangun Docker image dari Dockerfile
                     sh 'docker build -t $DOCKER_IMAGE:$DOCKER_TAG .'
+                }
+            }
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin'
+                    }
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    sh 'docker tag $DOCKER_IMAGE:$DOCKER_TAG kingslydev/$DOCKER_IMAGE:$DOCKER_TAG'
+                    sh 'docker push kingslydev/$DOCKER_IMAGE:$DOCKER_TAG'
                 }
             }
         }
@@ -26,8 +44,9 @@ pipeline {
         stage('Stop & Remove Existing Container') {
             steps {
                 script {
-                    // Stop dan hapus kontainer lama jika ada
-                    sh 'docker ps -q -f name=$DOCKER_IMAGE | xargs -r docker stop | xargs -r docker rm'
+                    sshagent(['vps-ssh-credentials']) {
+                        sh 'ssh -o StrictHostKeyChecking=no $REMOTE_SERVER "docker ps -q -f name=devops-automation | xargs -r docker stop | xargs -r docker rm"'
+                    }
                 }
             }
         }
@@ -35,8 +54,9 @@ pipeline {
         stage('Deploy New Container') {
             steps {
                 script {
-                    // Jalankan kontainer baru
-                    sh 'docker run -d --name $DOCKER_IMAGE -p 8080:8080 $DOCKER_IMAGE:$DOCKER_TAG'
+                    sshagent(['vps-ssh-credentials']) {
+                        sh 'ssh -o StrictHostKeyChecking=no $REMOTE_SERVER "docker run -d --name devops-automation -p 8080:8080 kingslydev/$DOCKER_IMAGE:$DOCKER_TAG"'
+                    }
                 }
             }
         }
@@ -44,10 +64,10 @@ pipeline {
 
     post {
         success {
-            echo 'Deployment berhasil!'
+            echo 'Deployment successful!'
         }
         failure {
-            echo 'Ada yang salah dengan deployment.'
+            echo 'Deployment failed.'
         }
     }
 }
