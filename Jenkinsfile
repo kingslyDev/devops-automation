@@ -17,50 +17,51 @@ pipeline {
             }
         }
 
-        stage('Pull to VPS') {
-            steps {
-                script {
-                    // Menggunakan SSH Agent untuk terhubung ke VPS
-                    sshagent(credentials: ['vps-ssh-credentials']) {
-                        sh """
-                            ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} 'git pull https://github.com/kingslyDev/devops-automation.git main && cd ${VPS_DIR}'
-                        """
-                    }
-                }
-            }
-        }
+    //     stage('Pull to VPS') {
+    //         steps {
+    //             script {
+    //                 // Menggunakan SSH Agent untuk terhubung ke VPS
+    //                 sshagent(credentials: ['vps-ssh-credentials']) {
+    //                     sh """
+    //                         ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} 'git pull https://github.com/kingslyDev/devops-automation.git main && cd ${VPS_DIR}'
+    //                     """
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    sshagent(credentials: ['vps-ssh-credentials']) {
-                        sh """
-                            ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} '
-                                cd ${VPS_DIR} &&
-                                docker build -t app1 .'
-                        """
-                    }
-                }
-            }
-        }
+    //     stage('Build Docker Image') {
+    //         steps {
+    //             script {
+    //                 sshagent(credentials: ['vps-ssh-credentials']) {
+    //                     sh """
+    //                         ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} '
+    //                             cd ${VPS_DIR} &&
+    //                             docker build -t app1 .'
+    //                     """
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        stage('Run Docker Image') {
-            steps {
-                script {
-                    sshagent(credentials: ['vps-ssh-credentials']) {
-                        sh """
-                            ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} '
-                                docker run -d -p 8080:8080 --name app1 app1'
-                        """
-                    }
-                }
-            }
-        }
-    }
+    //     stage('Run Docker Image') {
+    //         steps {
+    //             script {
+    //                 sshagent(credentials: ['vps-ssh-credentials']) {
+    //                     sh """
+    //                         ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} '
+    //                             docker run -d -p 8080:8080 --name app1 app1'
+    //                     """
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
-    post {
-        always {
-            echo 'Build pipeline completed.'
-        }
-    }
+    // post {
+    //     always {
+    //         echo 'Build pipeline completed.'
+    //     }
+    // }
+}
 }
