@@ -2,19 +2,30 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'my-docker-image' // Nama image Docker
-        DOCKERFILE_PATH = '/opt/Dockerfile' // Path Dockerfile di VPS
-        GO_APP_PATH = '/opt/devops-automation' // Path untuk menaruh kode Go
-        REPO_URL = 'https://github.com/kingslyDev/devops-automation.git'
-        BRANCH = 'main'
+        VPS_DIR = '/opt/devops-automation'
+        VPS_IP = '34.101.152.178'
+        VPS_USER = 'ghalyallcoc'  // Gantilah dengan nama pengguna VPS Anda
     }
 
     stages {
-        stage('Checkout') {
+        stage('Clone Repository') {
+            steps {
+                // Melakukan git pull untuk memastikan kita menggunakan branch main
+                script {
+                    git url: 'https://github.com/kingslyDev/devops-automation.git', branch: 'main'
+                }
+            }
+        }
+
+        stage('Pull to VPS') {
             steps {
                 script {
-                    // Clone repo ke /opt/devops-automation
-                    sh 'git clone -b ${BRANCH} ${REPO_URL} ${GO_APP_PATH} || (cd ${GO_APP_PATH} && git pull origin ${BRANCH})'
+                    // Menggunakan SSH Agent untuk terhubung ke VPS
+                    sshagent(credentials: ['vps-ssh-credentials']) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} 'git pull https://github.com/kingslyDev/devops-automation.git main && cd ${VPS_DIR}'
+                        """
+                    }
                 }
             }
         }
@@ -22,17 +33,26 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build Docker image dengan Dockerfile yang ada di /opt
-                    sh 'docker build -t ${DOCKER_IMAGE} -f ${DOCKERFILE_PATH} ${GO_APP_PATH}'
+                    sshagent(credentials: ['vps-ssh-credentials']) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} '
+                                cd ${VPS_DIR} &&
+                                docker build -t app1 .'
+                        """
+                    }
                 }
             }
         }
 
-        stage('Run Docker Container') {
+        stage('Run Docker Image') {
             steps {
                 script {
-                    // Run kontainer dari image yang baru dibangun
-                    sh 'docker run -d --name my_container -p 8080:8080 ${DOCKER_IMAGE}'
+                    sshagent(credentials: ['vps-ssh-credentials']) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} '
+                                docker run -d -p 8080:8080 --name app1 app1'
+                        """
+                    }
                 }
             }
         }
@@ -40,7 +60,7 @@ pipeline {
 
     post {
         always {
-            cleanWs() // Membersihkan workspace setelah selesai
+            echo 'Build pipeline completed.'
         }
     }
 }
