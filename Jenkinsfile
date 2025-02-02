@@ -10,6 +10,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
+                // Ambil kode dari repositori GitHub
                 git 'https://github.com/kingslyDev/devops-automation.git'
             }
         }
@@ -17,7 +18,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh 'sudo docker build -t $DOCKER_IMAGE:$DOCKER_TAG .'
+                    // Bangun Docker image
+                    sh 'docker build -t $DOCKER_IMAGE:$DOCKER_TAG .'
                 }
             }
         }
@@ -25,6 +27,7 @@ pipeline {
         stage('Login to Docker Hub') {
             steps {
                 script {
+                    // Login ke Docker Hub menggunakan kredensial yang sudah disimpan di Jenkins
                     withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
                         sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin'
                     }
@@ -35,8 +38,9 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 script {
-                    sh 'sudo docker tag $DOCKER_IMAGE:$DOCKER_TAG kingslydev/$DOCKER_IMAGE:$DOCKER_TAG'
-                    sh 'sudo docker push kingslydev/$DOCKER_IMAGE:$DOCKER_TAG'
+                    // Tag Docker image dan push ke Docker Hub
+                    sh 'docker tag $DOCKER_IMAGE:$DOCKER_TAG kingslydev/$DOCKER_IMAGE:$DOCKER_TAG'
+                    sh 'docker push kingslydev/$DOCKER_IMAGE:$DOCKER_TAG'
                 }
             }
         }
@@ -44,6 +48,7 @@ pipeline {
         stage('Stop & Remove Existing Container') {
             steps {
                 script {
+                    // Menghentikan dan menghapus container lama di VPS
                     sshagent(['vps-ssh-credentials']) {
                         sh 'ssh -o StrictHostKeyChecking=no $REMOTE_SERVER "docker ps -q -f name=devops-automation | xargs -r docker stop | xargs -r docker rm"'
                     }
@@ -54,6 +59,7 @@ pipeline {
         stage('Deploy New Container') {
             steps {
                 script {
+                    // Menjalankan container baru dengan image yang telah dipush ke Docker Hub
                     sshagent(['vps-ssh-credentials']) {
                         sh 'ssh -o StrictHostKeyChecking=no $REMOTE_SERVER "docker run -d --name devops-automation -p 8080:8080 kingslydev/$DOCKER_IMAGE:$DOCKER_TAG"'
                     }
