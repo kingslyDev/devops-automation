@@ -17,7 +17,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh 'docker build -t $DOCKER_IMAGE:$DOCKER_TAG .'
+                    sh 'sudo docker build -t $DOCKER_IMAGE:$DOCKER_TAG .'
                 }
             }
         }
@@ -35,8 +35,8 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 script {
-                    sh 'docker tag $DOCKER_IMAGE:$DOCKER_TAG kingslydev/$DOCKER_IMAGE:$DOCKER_TAG'
-                    sh 'docker push kingslydev/$DOCKER_IMAGE:$DOCKER_TAG'
+                    sh 'sudo docker tag $DOCKER_IMAGE:$DOCKER_TAG kingslydev/$DOCKER_IMAGE:$DOCKER_TAG'
+                    sh 'sudo docker push kingslydev/$DOCKER_IMAGE:$DOCKER_TAG'
                 }
             }
         }
