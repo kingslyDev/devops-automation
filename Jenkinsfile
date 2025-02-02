@@ -7,7 +7,7 @@ pipeline {
         REMOTE_SERVER = 'ghalyallcoc@34.128.112.49' // Ganti dengan IP VPS Anda
     }
 
-    stages {
+    stages {x`
         stage('Checkout') {
             steps {
                 git 'https://github.com/kingslyDev/devops-automation.git'
