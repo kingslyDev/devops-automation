@@ -2,72 +2,45 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'devops-automation'
-        DOCKER_TAG = 'latest'
-        REMOTE_SERVER = 'ghalyallcoc@34.128.112.49' // Ganti dengan IP VPS Anda
+        DOCKER_IMAGE = 'my-docker-image' // Nama image Docker
+        DOCKERFILE_PATH = '/opt/Dockerfile' // Path Dockerfile di VPS
+        GO_APP_PATH = '/opt/devops-automation' // Path untuk menaruh kode Go
+        REPO_URL = 'https://github.com/kingslyDev/devops-automation.git'
+        BRANCH = 'main'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/kingslyDev/devops-automation.git'
+                script {
+                    // Clone repo ke /opt/devops-automation
+                    sh 'git clone -b ${BRANCH} ${REPO_URL} ${GO_APP_PATH} || (cd ${GO_APP_PATH} && git pull origin ${BRANCH})'
+                }
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh 'docker build -t $DOCKER_IMAGE:$DOCKER_TAG .'
+                    // Build Docker image dengan Dockerfile yang ada di /opt
+                    sh 'docker build -t ${DOCKER_IMAGE} -f ${DOCKERFILE_PATH} ${GO_APP_PATH}'
                 }
             }
         }
 
-        stage('Login to Docker Hub') {
+        stage('Run Docker Container') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
-                        sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin'
-                    }
-                }
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                script {
-                    sh 'docker tag $DOCKER_IMAGE:$DOCKER_TAG kingslydev/$DOCKER_IMAGE:$DOCKER_TAG'
-                    sh 'docker push kingslydev/$DOCKER_IMAGE:$DOCKER_TAG'
-                }
-            }
-        }
-
-        stage('Stop & Remove Existing Container') {
-            steps {
-                script {
-                    sshagent(['vps-ssh-credentials']) {
-                        sh 'ssh -o StrictHostKeyChecking=no $REMOTE_SERVER "docker ps -q -f name=devops-automation | xargs -r docker stop | xargs -r docker rm"'
-                    }
-                }
-            }
-        }
-
-        stage('Deploy New Container') {
-            steps {
-                script {
-                    sshagent(['vps-ssh-credentials']) {
-                        sh 'ssh -o StrictHostKeyChecking=no $REMOTE_SERVER "docker run -d --name devops-automation -p 8080:8080 kingslydev/$DOCKER_IMAGE:$DOCKER_TAG"'
-                    }
+                    // Run kontainer dari image yang baru dibangun
+                    sh 'docker run -d --name my_container -p 8080:8080 ${DOCKER_IMAGE}'
                 }
             }
         }
     }
 
     post {
-        success {
-            echo 'Deployment successful!'
-        }
-        failure {
-            echo 'Deployment failed.'
+        always {
+            cleanWs() // Membersihkan workspace setelah selesai
         }
     }
 }
