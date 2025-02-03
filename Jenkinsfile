@@ -7,7 +7,7 @@ pipeline {
         APP_DIR = "/opt/devopsnyoba"
         DOCKER_IMAGE = "devops-automation:latest"
         CONTAINER_NAME = "devops_container"
-        PORT = "8080"
+        PORT = "8082"
         GIT_REPO = "git@github.com:kingslyDev/devops-automation.git"
         WORK_DIR = "${WORKSPACE}/repo"
     }
