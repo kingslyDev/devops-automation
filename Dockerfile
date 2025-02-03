@@ -4,8 +4,8 @@ FROM golang:1.22-alpine AS builder
 # Set working directory di dalam kontainer
 WORKDIR /app
 
-# Salin file go.mod dan go.sum terlebih dahulu
-COPY go.mod go.sum ./
+# Salin file go.mod terlebih dahulu
+COPY go.mod ./
 
 # Download semua dependensi sebelum menyalin source code
 RUN go mod tidy && go mod download
