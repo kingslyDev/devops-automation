@@ -13,17 +13,14 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                sshagent(['github-ssh-key']) { // Gunakan SSH key dari Jenkins Credentials
-                    git branch: 'main', url: "${GIT_REPO}"
-                }
+                git branch: 'main', url: "${GIT_REPO}"
             }
         }
         
         stage('Transfer Code to VPS') {
             steps {
                 sh """
-                scp -q -i ${SSH_KEY} -o StrictHostKeyChecking=no -r . ${VPS_USER}@${VPS_HOST}:${APP_DIR}/
-                ssh -q -i ${SSH_KEY} -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "chmod -R 775 ${APP_DIR}"
+                scp -q -i ${SSH_KEY} -o StrictHostKeyChecking=no -r * ${VPS_USER}@${VPS_HOST}:${APP_DIR}
                 """
             }
         }
@@ -33,7 +30,7 @@ pipeline {
                 sh """
                 ssh -q -i ${SSH_KEY} -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} << EOF
                 cd ${APP_DIR}
-                docker build --no-cache --rm -t ${DOCKER_IMAGE} .
+                docker build --rm -t ${DOCKER_IMAGE} .
                 EOF
                 """
             }
