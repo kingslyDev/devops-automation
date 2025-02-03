@@ -20,7 +20,7 @@ pipeline {
         stage('Transfer Code to VPS') {
             steps {
                 sh """
-                scp -q -i ${SSH_KEY} -o StrictHostKeyChecking=no -r . ${VPS_USER}@${VPS_HOST}:${APP_DIR}
+                scp -q -i ${SSH_KEY} -o StrictHostKeyChecking=no -r * ${VPS_USER}@${VPS_HOST}:${APP_DIR}
                 """
             }
         }
