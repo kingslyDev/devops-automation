@@ -13,14 +13,20 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: "${GIT_REPO}"
+                sh """
+                export GIT_SSH_COMMAND='ssh -i /var/lib/jenkins/.ssh/id_rsa -o StrictHostKeyChecking=no'
+                git clone ${GIT_REPO} ${WORKSPACE}/repo
+                cd ${WORKSPACE}/repo
+                git checkout main
+                """
             }
         }
-        
+
         stage('Transfer Code to VPS') {
             steps {
                 sh """
-                scp -q -i ${SSH_KEY} -o StrictHostKeyChecking=no -r * ${VPS_USER}@${VPS_HOST}:${APP_DIR}
+                scp -q -i ${SSH_KEY} -o StrictHostKeyChecking=no -r ${WORKSPACE}/repo/* ${VPS_USER}@${VPS_HOST}:${APP_DIR}/
+                ssh -q -i ${SSH_KEY} -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "chmod -R 775 ${APP_DIR}"
                 """
             }
         }
@@ -28,10 +34,7 @@ pipeline {
         stage('Build Docker Image on VPS') {
             steps {
                 sh """
-                ssh -q -i ${SSH_KEY} -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} << EOF
-                cd ${APP_DIR}
-                docker build --rm -t ${DOCKER_IMAGE} .
-                EOF
+                ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "cd ${APP_DIR} && docker build --no-cache --rm -t ${DOCKER_IMAGE} ."
                 """
             }
         }
@@ -39,11 +42,11 @@ pipeline {
         stage('Deploy Container on VPS') {
             steps {
                 sh """
-                ssh -q -i ${SSH_KEY} -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} << EOF
+                ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "
                 docker stop ${CONTAINER_NAME} || true
                 docker rm ${CONTAINER_NAME} || true
                 docker run -d -p ${PORT}:8080 --name ${CONTAINER_NAME} ${DOCKER_IMAGE}
-                EOF
+                "
                 """
             }
         }
