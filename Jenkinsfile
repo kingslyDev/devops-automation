@@ -43,8 +43,16 @@ pipeline {
             steps {
                 sh """
                 ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} "
-                docker stop ${CONTAINER_NAME} || true
-                docker rm ${CONTAINER_NAME} || true
+                # Cek apakah container sedang aktif
+                if [ \$(docker ps -aq --filter "name=${CONTAINER_NAME}") ]; then
+                    echo 'Container ${CONTAINER_NAME} sedang berjalan, akan dihentikan...'
+                    docker stop ${CONTAINER_NAME}
+                    docker rm ${CONTAINER_NAME}
+                else
+                    echo 'Tidak ada container yang sedang berjalan dengan nama ${CONTAINER_NAME}'
+                fi
+
+                # Jalankan container baru
                 docker run -d -p ${PORT}:8080 --name ${CONTAINER_NAME} ${DOCKER_IMAGE}
                 "
                 """
