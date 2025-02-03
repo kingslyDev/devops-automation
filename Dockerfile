@@ -4,8 +4,8 @@ FROM golang:1.20-alpine
 # Set working directory di dalam kontainer
 WORKDIR /app
 
-# Salin go.mod dan go.sum terlebih dahulu untuk memanfaatkan caching dependencies
-COPY go.mod go.sum ./
+# Salin go.mod terlebih dahulu untuk memanfaatkan caching dependencies
+COPY go.mod ./
 RUN go mod download
 
 # Salin seluruh kode aplikasi Go ke dalam kontainer
