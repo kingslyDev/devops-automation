@@ -1,67 +1,57 @@
 pipeline {
     agent any
-
     environment {
-        VPS_DIR = '/opt/devops-automation'
-        VPS_IP = '34.101.152.178'
-        VPS_USER = 'ghalyallcoc'  // Gantilah dengan nama pengguna VPS Anda
+        VPS_USER = "ghalyallcoc"
+        VPS_HOST = "34.128.112.49"
+        SSH_KEY = "/var/lib/jenkins/.ssh/google-cloud-ssh"
+        APP_DIR = "/opt/devopsnyoba"
+        DOCKER_IMAGE = "devops-automation:latest"
+        CONTAINER_NAME = "devops_container"
+        PORT = "8080"
+        GIT_REPO = "git@github.com:kingslyDev/devops-automation.git"
     }
-
     stages {
-        stage('Clone Repository') {
+        stage('Checkout Code') {
             steps {
-                // Melakukan git pull untuk memastikan kita menggunakan branch main
-                script {
-                    git url: 'https://github.com/kingslyDev/devops-automation.git', branch: 'main'
-                }
+                git branch: 'main', url: "${GIT_REPO}"
+            }
+        }
+        
+        stage('Linting Go Code') {
+            steps {
+                sh 'go fmt ./...'
+            }
+        }
+        
+        stage('Transfer Code to VPS') {
+            steps {
+                sh """
+                scp -i ${SSH_KEY} -o StrictHostKeyChecking=no -r . ${VPS_USER}@${VPS_HOST}:${APP_DIR}
+                """
             }
         }
 
-    //     stage('Pull to VPS') {
-    //         steps {
-    //             script {
-    //                 // Menggunakan SSH Agent untuk terhubung ke VPS
-    //                 sshagent(credentials: ['vps-ssh-credentials']) {
-    //                     sh """
-    //                         ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} 'git pull https://github.com/kingslyDev/devops-automation.git main && cd ${VPS_DIR}'
-    //                     """
-    //                 }
-    //             }
-    //         }
-    //     }
+        stage('Build Docker Image on VPS') {
+            steps {
+                sh """
+                ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} << EOF
+                cd ${APP_DIR}
+                docker build -t ${DOCKER_IMAGE} .
+                EOF
+                """
+            }
+        }
 
-    //     stage('Build Docker Image') {
-    //         steps {
-    //             script {
-    //                 sshagent(credentials: ['vps-ssh-credentials']) {
-    //                     sh """
-    //                         ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} '
-    //                             cd ${VPS_DIR} &&
-    //                             docker build -t app1 .'
-    //                     """
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     stage('Run Docker Image') {
-    //         steps {
-    //             script {
-    //                 sshagent(credentials: ['vps-ssh-credentials']) {
-    //                     sh """
-    //                         ssh -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_IP} '
-    //                             docker run -d -p 8080:8080 --name app1 app1'
-    //                     """
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-
-    // post {
-    //     always {
-    //         echo 'Build pipeline completed.'
-    //     }
-    // }
-}
+        stage('Deploy Container on VPS') {
+            steps {
+                sh """
+                ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no ${VPS_USER}@${VPS_HOST} << EOF
+                docker stop ${CONTAINER_NAME} || true
+                docker rm ${CONTAINER_NAME} || true
+                docker run -d -p ${PORT}:8080 --name ${CONTAINER_NAME} ${DOCKER_IMAGE}
+                EOF
+                """
+            }
+        }
+    }
 }
